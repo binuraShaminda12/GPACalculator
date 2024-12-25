@@ -60,18 +60,30 @@
         .actions button:hover {
             background-color: #c82333;
         }
-        .add-course {
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .buttons button {
             padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            display: block;
-            margin: 0 auto 20px;
+        }
+        .add-course {
+            background-color: #007bff;
+            color: white;
         }
         .add-course:hover {
             background-color: #0056b3;
+        }
+        .clear-data {
+            background-color: #28a745;
+            color: white;
+        }
+        .clear-data:hover {
+            background-color: #218838;
         }
         .owner {
             text-align: left;
@@ -102,7 +114,12 @@
                 <div id="grade-distribution"></div>
             </div>
         </div>
-        <button class="add-course" onclick="addCourse()">Add Course</button>
+        <div class="buttons">
+            <button class="add-course" onclick="addCourse()">Add Course</button>
+            <button class="clear-data" onclick="clearData()">Clear Data</button>
+            <button class="add-course" onclick="exportToExcel()">Export to Excel</button>
+            <input type="file" id="import-file" accept=".xlsx" onchange="importFromExcel(event)">
+        </div>
         <table>
             <thead>
                 <tr>
@@ -117,6 +134,7 @@
         </table>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         const gradePoints = {
             'A+': 4.0, 'A': 4.0, 'A-': 3.7,
@@ -125,7 +143,6 @@
             'D+': 1.3, 'D': 1.0, 'F': 0.0
         };
 
-        // Load courses from local storage or initialize empty
         let courses = JSON.parse(localStorage.getItem('gpaCourses')) || [];
 
         function saveCoursesToLocalStorage() {
@@ -155,7 +172,7 @@
             document.getElementById('degree-class').textContent = determineClass();
             document.getElementById('total-credits').textContent = courses.reduce((sum, course) => sum + parseFloat(course.credits), 0);
             updateGradeDistribution();
-            saveCoursesToLocalStorage(); // Save data to local storage
+            saveCoursesToLocalStorage();
         }
 
         function addCourse() {
@@ -197,7 +214,36 @@
                 .map(([grade, count]) => `<div>${grade}: ${count}</div>`).join('');
         }
 
-        updateDisplay(); // Render on page load
+        function clearData() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                courses = [];
+                updateDisplay();
+            }
+        }
+
+        function exportToExcel() {
+            const worksheet = XLSX.utils.json_to_sheet(courses);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Courses");
+            XLSX.writeFile(workbook, "GPA_Data.xlsx");
+        }
+
+        function importFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                courses = XLSX.utils.sheet_to_json(sheet);
+                updateDisplay();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        updateDisplay();
     </script>
 </body>
 </html>
